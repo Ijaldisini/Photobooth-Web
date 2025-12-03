@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 
 export default function Result({ frame, shots }) {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef(null); // SINGLE canvas (preview)
   const [finalImage, setFinalImage] = useState(null);
 
   useEffect(() => {
@@ -12,33 +12,47 @@ export default function Result({ frame, shots }) {
 
     const frameImg = new Image();
     frameImg.src = frame;
+    frameImg.crossOrigin = "anonymous";
 
     frameImg.onload = () => {
-      canvas.width = frameImg.width;
-      canvas.height = frameImg.height;
+      const maxH = window.innerHeight * 0.9;
+      const scale = maxH / frameImg.height;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(frameImg, 0, 0);
+      const w = frameImg.width * scale;
+      const h = frameImg.height * scale;
+
+      // SINGLE CANVAS
+      canvas.width = w;
+      canvas.height = h;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(frameImg, 0, 0, w, h);
 
       const positions = [
-        { x: 100, y: 200, w: 450, h: 450 }, // foto 1
-        { x: 100, y: 750, w: 450, h: 450 }, // foto 2
-        { x: 100, y: 1300, w: 450, h: 450 }, // foto 3
-      ];
+        { x: 40, y: 120, w: 250, h: 250 },
+        { x: 40, y: 400, w: 250, h: 250 },
+        { x: 40, y: 680, w: 250, h: 250 },
+      ].map((p) => ({
+        x: p.x * scale,
+        y: p.y * scale,
+        w: p.w * scale,
+        h: p.h * scale,
+      }));
 
       let loaded = 0;
 
-      shots.slice(0, 3).forEach((shot, index) => {
+      shots.slice(0, 3).forEach((shot, i) => {
         const img = new Image();
         img.src = shot;
+        img.crossOrigin = "anonymous";
 
         img.onload = () => {
           ctx.drawImage(
             img,
-            positions[index].x,
-            positions[index].y,
-            positions[index].w,
-            positions[index].h
+            positions[i].x,
+            positions[i].y,
+            positions[i].w,
+            positions[i].h
           );
 
           loaded++;
@@ -50,37 +64,63 @@ export default function Result({ frame, shots }) {
     };
   }, [frame, shots]);
 
-  // DOWNLOAD FUNCTION
+  // ===========================================
+  //           DOWNLOAD DOUBLE CANVAS
+  // ===========================================
   const downloadImage = () => {
-    const link = document.createElement("a");
-    link.download = "photobooth.png";
-    link.href = finalImage;
-    link.click();
+    const singleCanvas = canvasRef.current;
+    const w = singleCanvas.width;
+    const h = singleCanvas.height;
+
+    // Buat canvas DOUBLE
+    const doubleCanvas = document.createElement("canvas");
+    doubleCanvas.width = w * 2;
+    doubleCanvas.height = h;
+
+    const dctx = doubleCanvas.getContext("2d");
+
+    const img = new Image();
+    img.onload = () => {
+      // kiri
+      dctx.drawImage(img, 0, 0, w, h);
+      // kanan
+      dctx.drawImage(img, w, 0, w, h);
+
+      // simpan hasil double
+      const final = doubleCanvas.toDataURL("image/png");
+
+      fetch(final)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = "photobooth-double.png";
+          link.click();
+        });
+    };
+
+    img.src = singleCanvas.toDataURL("image/png"); // ambil hasil SINGLE
   };
 
-  if (!frame) return <p className="text-white">Frame not selected.</p>;
-
   return (
-    <main className="text-white bg-black min-h-[80vh] flex flex-col items-center p-6">
-      {/* canvas di-hide */}
+    <main className="text-white bg-black min-h-screen flex flex-col items-center p-6">
+      {/* Canvas preview (SINGLE only) */}
       <canvas ref={canvasRef} className="hidden" />
 
+      {/* PREVIEW tetap single */}
       {finalImage && (
-        <div className="scale-[0.25] origin-top-left">
-          <img
-            src={finalImage}
-            alt="result"
-            className="rounded-xl shadow-xl border border-white"
-          />
-        </div>
+        <img
+          src={finalImage}
+          alt="result"
+          className="rounded-2xl shadow-xl border border-white w-[350px] mt-4"
+        />
       )}
 
-      {/* tombol download */}
       <button
         onClick={downloadImage}
-        className="mt-6 px-6 py-2 bg-white text-black font-bold rounded-xl hover:scale-105 transition"
+        className="mt-6 px-6 py-2 bg-white text-black font-bold rounded-2xl hover:scale-105 transition"
       >
-        Download Result
+        Download Result (Double)
       </button>
     </main>
   );
