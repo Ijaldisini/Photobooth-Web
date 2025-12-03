@@ -68,38 +68,78 @@ export default function Result({ frame, shots }) {
   //           DOWNLOAD DOUBLE CANVAS
   // ===========================================
   const downloadImage = () => {
-    const singleCanvas = canvasRef.current;
-    const w = singleCanvas.width;
-    const h = singleCanvas.height;
+    const previewCanvas = canvasRef.current;
 
-    // Buat canvas DOUBLE
-    const doubleCanvas = document.createElement("canvas");
-    doubleCanvas.width = w * 2;
-    doubleCanvas.height = h;
+    // --- Load frame asli dalam resolusi full ---
+    const frameImg = new Image();
+    frameImg.src = frame;
+    frameImg.crossOrigin = "anonymous";
 
-    const dctx = doubleCanvas.getContext("2d");
+    frameImg.onload = () => {
+      const W = frameImg.width; // resolusi asli frame
+      const H = frameImg.height;
 
-    const img = new Image();
-    img.onload = () => {
-      // kiri
-      dctx.drawImage(img, 0, 0, w, h);
-      // kanan
-      dctx.drawImage(img, w, 0, w, h);
+      // canvas HD SINGLE (bukan preview!)
+      const hdSingle = document.createElement("canvas");
+      hdSingle.width = W;
+      hdSingle.height = H;
 
-      // simpan hasil double
-      const final = doubleCanvas.toDataURL("image/png");
+      const sctx = hdSingle.getContext("2d");
+      sctx.drawImage(frameImg, 0, 0, W, H);
 
-      fetch(final)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const link = document.createElement("a");
-          link.href = URL.createObjectURL(blob);
-          link.download = "photobooth-double.png";
-          link.click();
-        });
+      // === posisi foto berdasarkan resolusi asli ===
+      const positions = [
+        { x: 40, y: 120, w: 250, h: 250 },
+        { x: 40, y: 400, w: 250, h: 250 },
+        { x: 40, y: 680, w: 250, h: 250 },
+      ];
+
+      let loaded = 0;
+
+      shots.slice(0, 3).forEach((shot, i) => {
+        const img = new Image();
+        img.src = shot;
+        img.crossOrigin = "anonymous";
+
+        img.onload = () => {
+          sctx.drawImage(
+            img,
+            positions[i].x,
+            positions[i].y,
+            positions[i].w,
+            positions[i].h
+          );
+
+          loaded++;
+          if (loaded === 3) {
+            // === setelah SINGLE HD selesai, buat DOUBLE ===
+            const doubleCanvas = document.createElement("canvas");
+            doubleCanvas.width = W * 2;
+            doubleCanvas.height = H;
+
+            const dctx = doubleCanvas.getContext("2d");
+
+            // kiri
+            dctx.drawImage(hdSingle, 0, 0, W, H);
+
+            // kanan
+            dctx.drawImage(hdSingle, W, 0, W, H);
+
+            // export HD
+            const final = doubleCanvas.toDataURL("image/png");
+
+            fetch(final)
+              .then((res) => res.blob())
+              .then((blob) => {
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "photobooth-HD-double.png";
+                link.click();
+              });
+          }
+        };
+      });
     };
-
-    img.src = singleCanvas.toDataURL("image/png"); // ambil hasil SINGLE
   };
 
   return (
