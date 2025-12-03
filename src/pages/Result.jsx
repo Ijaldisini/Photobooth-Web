@@ -1,7 +1,30 @@
 import { useRef, useEffect, useState } from "react";
 
+function drawImageCover(ctx, img, x, y, w, h) {
+  const imgRatio = img.width / img.height;
+  const frameRatio = w / h;
+
+  let drawW, drawH;
+
+  const zoom = 2.35;
+
+  if (imgRatio > frameRatio) {
+    drawH = h * zoom;
+    drawW = drawH * imgRatio;
+  } else {
+    drawW = w * zoom;
+    drawH = drawW / imgRatio;
+  }
+
+  // posisi otomatis ke tengah
+  const posX = x + (w - drawW) / 2;
+  const posY = y + (h - drawH) / 2;
+
+  ctx.drawImage(img, posX, posY, drawW, drawH);
+}
+
 export default function Result({ frame, shots }) {
-  const canvasRef = useRef(null); // SINGLE canvas (preview)
+  const canvasRef = useRef(null);
   const [finalImage, setFinalImage] = useState(null);
 
   useEffect(() => {
@@ -21,17 +44,15 @@ export default function Result({ frame, shots }) {
       const w = frameImg.width * scale;
       const h = frameImg.height * scale;
 
-      // SINGLE CANVAS
       canvas.width = w;
       canvas.height = h;
 
       ctx.clearRect(0, 0, w, h);
-      ctx.drawImage(frameImg, 0, 0, w, h);
 
       const positions = [
-        { x: 40, y: 120, w: 250, h: 250 },
-        { x: 40, y: 400, w: 250, h: 250 },
-        { x: 40, y: 680, w: 250, h: 250 },
+        { x: 520, y: 500, w: 250, h: 330 },
+        { x: 520, y: 1450, w: 250, h: 330 },
+        { x: 520, y: 2450, w: 250, h: 330 },
       ].map((p) => ({
         x: p.x * scale,
         y: p.y * scale,
@@ -47,7 +68,8 @@ export default function Result({ frame, shots }) {
         img.crossOrigin = "anonymous";
 
         img.onload = () => {
-          ctx.drawImage(
+          drawImageCover(
+            ctx,
             img,
             positions[i].x,
             positions[i].y,
@@ -57,6 +79,7 @@ export default function Result({ frame, shots }) {
 
           loaded++;
           if (loaded === 3) {
+            ctx.drawImage(frameImg, 0, 0, w, h);
             setFinalImage(canvas.toDataURL("image/png"));
           }
         };
@@ -65,33 +88,26 @@ export default function Result({ frame, shots }) {
   }, [frame, shots]);
 
   // ===========================================
-  //           DOWNLOAD DOUBLE CANVAS
+  //        DOWNLOAD HD DOUBLE — FIXED
   // ===========================================
   const downloadImage = () => {
-    const previewCanvas = canvasRef.current;
-
-    // --- Load frame asli dalam resolusi full ---
     const frameImg = new Image();
     frameImg.src = frame;
     frameImg.crossOrigin = "anonymous";
 
     frameImg.onload = () => {
-      const W = frameImg.width; // resolusi asli frame
+      const W = frameImg.width;
       const H = frameImg.height;
 
-      // canvas HD SINGLE (bukan preview!)
       const hdSingle = document.createElement("canvas");
       hdSingle.width = W;
       hdSingle.height = H;
-
       const sctx = hdSingle.getContext("2d");
-      sctx.drawImage(frameImg, 0, 0, W, H);
 
-      // === posisi foto berdasarkan resolusi asli ===
       const positions = [
-        { x: 40, y: 120, w: 250, h: 250 },
-        { x: 40, y: 400, w: 250, h: 250 },
-        { x: 40, y: 680, w: 250, h: 250 },
+        { x: 520, y: 500, w: 250, h: 330 },
+        { x: 520, y: 1450, w: 250, h: 330 },
+        { x: 520, y: 2450, w: 250, h: 330 },
       ];
 
       let loaded = 0;
@@ -102,7 +118,8 @@ export default function Result({ frame, shots }) {
         img.crossOrigin = "anonymous";
 
         img.onload = () => {
-          sctx.drawImage(
+          drawImageCover(
+            sctx,
             img,
             positions[i].x,
             positions[i].y,
@@ -112,20 +129,16 @@ export default function Result({ frame, shots }) {
 
           loaded++;
           if (loaded === 3) {
-            // === setelah SINGLE HD selesai, buat DOUBLE ===
+            sctx.drawImage(frameImg, 0, 0, W, H);
+
             const doubleCanvas = document.createElement("canvas");
             doubleCanvas.width = W * 2;
             doubleCanvas.height = H;
 
             const dctx = doubleCanvas.getContext("2d");
-
-            // kiri
             dctx.drawImage(hdSingle, 0, 0, W, H);
-
-            // kanan
             dctx.drawImage(hdSingle, W, 0, W, H);
 
-            // export HD
             const final = doubleCanvas.toDataURL("image/png");
 
             fetch(final)
@@ -144,10 +157,8 @@ export default function Result({ frame, shots }) {
 
   return (
     <main className="text-white bg-black min-h-screen flex flex-col items-center p-6">
-      {/* Canvas preview (SINGLE only) */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* PREVIEW tetap single */}
       {finalImage && (
         <img
           src={finalImage}
