@@ -50,9 +50,9 @@ export default function Result({ frame, shots }) {
       ctx.clearRect(0, 0, w, h);
 
       const positions = [
-        { x: 520, y: 500, w: 250, h: 330 },
-        { x: 520, y: 1450, w: 250, h: 330 },
-        { x: 520, y: 2450, w: 250, h: 330 },
+        { x: 535, y: 500, w: 250, h: 330 },
+        { x: 555, y: 1460, w: 250, h: 330 },
+        { x: 535, y: 2450, w: 250, h: 330 },
       ].map((p) => ({
         x: p.x * scale,
         y: p.y * scale,
@@ -105,9 +105,9 @@ export default function Result({ frame, shots }) {
       const sctx = hdSingle.getContext("2d");
 
       const positions = [
-        { x: 520, y: 500, w: 250, h: 330 },
-        { x: 520, y: 1450, w: 250, h: 330 },
-        { x: 520, y: 2450, w: 250, h: 330 },
+        { x: 535, y: 500, w: 250, h: 330 },
+        { x: 555, y: 1460, w: 250, h: 330 },
+        { x: 535, y: 2450, w: 250, h: 330 },
       ];
 
       let loaded = 0;

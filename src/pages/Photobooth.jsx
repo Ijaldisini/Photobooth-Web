@@ -92,6 +92,7 @@ export default function Photobooth({ frame, onDone }) {
         audio={false}
         ref={webcamRef}
         screenshotFormat="image/png"
+        mirrored={true}
         className="w-80 h-auto rounded-2xl border-2 border-white shadow-xl"
       />
 
